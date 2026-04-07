@@ -1,0 +1,492 @@
+
+import pandas as pd
+from scipy import stats
+# Load your dataset
+df = pd.read_csv("/content/road_accident_dataset.csv")
+data = df["Speed Limit"]
+print("DESCRIPTIVE STATISTICS FOR SPEED LIMIT\n")
+
+mean_val = data.mean()
+median_val = data.median()
+mode_val = data.mode()[0]
+ 
+print("1. Measures of Central Tendency")
+print(f"Mean           	: {mean_val:.2f}")
+print(f"Median         	: {median_val}")
+print(f"Mode           	: {mode_val}\n")
+range_val = data.max() - data.min()
+variance_val = data.var()
+std_dev_val = data.std()
+print("2. Measures of Dispersion (Spread)")
+print(f"Range          	: {range_val}")
+print(f"Variance       	: {variance_val:.2f}")
+print(f"Standard Deviation : {std_dev_val:.2f}\n")
+skewness = stats.skew(data)
+kurtosis = stats.kurtosis(data)
+print("3. Shape of Distribution")
+print(f"Skewness       	: {skewness:.2f}")
+print(f"Kurtosis       	: {kurtosis:.2f}")
+2 Pre-processing
+ 1.Normalization
+ Code 
+import pandas as pd 
+from sklearn.preprocessing import MinMaxScaler 
+df = pd.read_csv("road_accident_dataset.csv", sep=",") # Identify numerical columns automatically num_cols = df.select_dtypes(include=['int64', 'float64']).columns 
+# Min-Max Scaling 
+minmax = MinMaxScaler()
+ df[num_cols] = minmax.fit_transform(df[num_cols])
+ df[num_cols].to_csv("normalisation_dataset.csv", index=False)
+2) Standardization
+ standard = StandardScaler() 
+df[num_cols] = standard.fit_transform(df[num_cols]) 
+df[num_cols].to_csv("scaling_dataset.csv", index=False)
+3) missing
+print(df.isnull().sum())
+4)New col
+df['Accident_Occurred'] = ( (df['Driver Alcohol Level'] > 0.5) | (df['Driver Fatigue'] == 1) | (df['Visibility Level'] < 0.3) ).astype(int) 
+print(df['Accident_Occurred'].value_counts())
+5 Oversampling (e.g., SMOTE or Random Oversampling)
+ Oversampling increases the minority class samples so the dataset becomes balanced.
+ Code 
+from imblearn.over_sampling import SMOTE 
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+ import pandas as pd  # Separate features (X) and target (y) 
+X = df.drop("Accident_Occurred", axis=1) 
+y = df["Accident_Occurred"] # Identify categorical and numerical columns 
+categorical_cols = X.select_dtypes(include='object').columns 
+numerical_cols = X.select_dtypes(include=['int64', 'float64']).columns
+# Create a column transformer for one-hot encoding categorical features # 'passthrough' ensures numerical columns are kept as they are
+ preprocessor = ColumnTransformer( transformers=[
+ ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)  ],
+ remainder='passthrough' ) 
+# Apply the transformations to X # X_transformed will be a sparse matrix or a dense numpy array, depending on the data 
+X_transformed = preprocessor.fit_transform(X)
+ # Apply SMOTE
+ smote = SMOTE(random_state=42) 
+X_resampled, y_resampled = smote.fit_resample(X_transformed, y) 
+print("Before SMOTE:", y.value_counts())
+ print("After SMOTE:", y_resampled.value_counts())
+Undersampling
+from imblearn.under_sampling  import RandomUnderSampler
+ rus = RandomUnderSampler(random_state=42) 
+X_resampled, y_resampled = rus.fit_resample(X, y) 
+print("Before Downsampling:", y.value_counts()) 
+print("After Downsampling:", y_resampled.value_counts()) 
+Visualization:
+import seaborn as sns
+ import matplotlib.pyplot as plt 
+df["Time of Day"].value_counts().sort_index().plot(kind="line")
+ plt.title("Accidents by Time of Day")
+ plt.xlabel("Time of Day") 
+plt.ylabel("Number of Accidents")
+ plt.show() 
+
+pivot_table = df.pivot_table( index="Time of Day", columns="Weather Conditions", aggfunc="size" # counts rows ) 
+sns.heatmap(pivot_table, cmap="Reds")
+ plt.title("Accidents by Time of Day vs Weather") 
+plt.show() 
+
+df["Weather Conditions"].value_counts().plot(kind="pie", autopct="%1.1f%%") 
+plt.title("Accidents by Weather Conditions")
+ plt.ylabel("") # hide y-label 
+plt.show() 
+Part -2
+Classification:
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+# Load dataset
+df = pd.read_excel("dataset.xlsx")
+# Remove missing values
+df = df.dropna()
+# Encode categorical columns
+le = LabelEncoder()
+for col in df.select_dtypes(include='object').columns:
+    df[col] = le.fit_transform(df[col])
+# Split features and target
+X = df.drop("Accident Severity", axis=1)
+y = df["Accident Severity"]
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Model
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
+# Prediction
+y_pred = model.predict(X_test)
+# Evaluation
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+Linear regression
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+# Model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Prediction
+y_pred = model.predict(X_test)
+# Evaluation
+print("MAE:", mean_absolute_error(y_test, y_pred))
+print("MSE:", mean_squared_error(y_test, y_pred))
+print("R2 Score:", r2_score(y_test, y_pred))
+Clustering
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+# Load dataset
+df = pd.read_excel("dataset.xlsx")
+# Remove missing values
+df = df.dropna()
+# Encode categorical columns
+le = LabelEncoder()
+for col in df.select_dtypes(include='object').columns:
+    df[col] = le.fit_transform(df[col])
+# Remove target column (if exists)
+X = df.drop("Accident Severity", axis=1)
+# Scaling
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+# Apply KMeans
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(X_scaled)
+# Evaluation
+print("Inertia:", kmeans.inertia_)
+print("Silhouette Score:", silhouette_score(X_scaled, clusters))
+Image (part -3)
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+# Load image dataset from folder
+img_size = (128, 128)
+train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    "/content/dataset",
+    validation_split=0.2,
+    subset="training",
+    seed=42,
+    image_size=img_size,
+    batch_size=32
+)
+val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+    "/content/dataset",
+    validation_split=0.2,
+    subset="validation",
+    seed=42,
+    image_size=img_size,
+    batch_size=32
+)
+# Build CNN model
+model = Sequential([
+    tf.keras.layers.Rescaling(1./255, input_shape=(128,128,3)),
+    Conv2D(32, (3,3), activation='relu'),
+    MaxPooling2D(),
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D(),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(len(train_ds.class_names), activation='softmax')
+])
+# Compile model
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+# Train model
+history = model.fit(train_ds, validation_data=val_ds, epochs=5)
+# Evaluate model
+loss, accuracy = model.evaluate(val_ds)
+print("Validation Accuracy:", accuracy)
+
+Image
+import os
+import cv2
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import matplotlib.pyplot as plt
+
+# -------------------- LOAD DATA --------------------
+data = []
+labels = []
+
+dataset_path = "image_dataset"
+
+classes = os.listdir(dataset_path)
+for label, category in enumerate(classes):
+    folder_path = os.path.join(dataset_path, category)
+    
+    for img_name in os.listdir(folder_path):
+        img_path = os.path.join(folder_path, img_name)
+        
+        img = cv2.imread(img_path)
+        img = cv2.resize(img, (64, 64))   # resize image
+        img = img.flatten()               # convert image to 1D array
+        data.append(img)
+        labels.append(label)
+
+# Convert to numpy arrays
+X = np.array(data)
+y = np.array(labels)
+
+# -------------------- SPLIT DATA --------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+# -------------------- TRAIN MODEL --------------------
+model = KNeighborsClassifier(n_neighbors=3)
+model.fit(X_train, y_train)
+# -------------------- PREDICT --------------------
+y_pred = model.predict(X_test)
+
+# -------------------- EVALUATE --------------------
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+# -------------------- TEST SINGLE IMAGE --------------------
+test_img = cv2.imread("test.png")
+test_img = cv2.resize(test_img, (64, 64))
+test_img_flat = test_img.flatten().reshape(1, -1)
+prediction = model.predict(test_img_flat)
+print("Predicted Class:", classes[prediction[0]])
+# Show image
+plt.imshow(test_img)
+plt.title("Predicted: " + classes[prediction[0]])
+plt.show()
+
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+
+# ------------------------------------------------
+# 1. Load Dataset
+# ------------------------------------------------
+df = pd.read_csv("goldprice.csv")
+
+# ------------------------------------------------
+# 2. Clean Numeric Columns (IMPORTANT)
+# ------------------------------------------------
+cols = ['Price', 'Open', 'High', 'Low']
+
+for col in cols:
+    df[col] = df[col].astype(str).str.replace(',', '')
+    df[col] = pd.to_numeric(df[col])
+
+# ------------------------------------------------
+# 3. Create Target Column
+# ------------------------------------------------
+df['Target'] = (df['Price'].diff() > 0).astype(int)
+
+# Remove first row (NaN due to diff)
+df = df.dropna()
+
+# ------------------------------------------------
+# 4. Features and Target
+# ------------------------------------------------
+X = df[['Price', 'Open', 'High', 'Low']]
+y = df['Target']
+
+# ------------------------------------------------
+# 5. Train-Test Split
+# ------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# ------------------------------------------------
+# 6. Define Models
+# ------------------------------------------------
+models = {
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Decision Tree": DecisionTreeClassifier(),
+    "Random Forest": RandomForestClassifier(),
+    "KNN": KNeighborsClassifier(n_neighbors=5),
+    "Naive Bayes": GaussianNB(),
+    "SVM": SVC()
+}
+
+results = []
+
+# ------------------------------------------------
+# 7. Train & Evaluate
+# ------------------------------------------------
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    acc = accuracy_score(y_test, y_pred)
+
+    results.append({
+        "Model": name,
+        "Accuracy": acc
+    })
+
+    print("\n-----------------------------")
+    print(name)
+    print("Accuracy:", acc)
+    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+    print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# ------------------------------------------------
+# 8. Compare Models
+# ------------------------------------------------
+results_df = pd.DataFrame(results)
+
+print("\n=============================")
+print("MODEL COMPARISON")
+print(results_df.sort_values(by="Accuracy", ascending=False))
+
+import pandas as pd
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
+
+# ------------------------------------------------
+# 1. Load Dataset
+# ------------------------------------------------
+df = pd.read_csv("goldprice.csv")
+
+# ------------------------------------------------
+# 2. Clean Numeric Columns (IMPORTANT)
+# ------------------------------------------------
+cols = ['Price', 'Open', 'High', 'Low']
+
+for col in cols:
+    df[col] = df[col].astype(str).str.replace(',', '')
+    df[col] = pd.to_numeric(df[col])
+
+# Remove any missing values (safe)
+df = df.dropna()
+
+# ------------------------------------------------
+# 3. Features and Target
+# ------------------------------------------------
+X = df[['Open', 'High', 'Low']]
+y = df['Price']
+
+# ------------------------------------------------
+# 4. Train-Test Split
+# ------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# ------------------------------------------------
+# 5. Define Models
+# ------------------------------------------------
+models = {
+    "Linear Regression": LinearRegression(),
+    "Decision Tree": DecisionTreeRegressor(),
+    "Random Forest": RandomForestRegressor(),
+    "KNN": KNeighborsRegressor(n_neighbors=5)
+}
+
+results = []
+
+# ------------------------------------------------
+# 6. Train & Evaluate
+# ------------------------------------------------
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    results.append({
+        "Model": name,
+        "MSE": mse,
+        "R2 Score": r2
+    })
+
+    print("\n-----------------------------")
+    print(name)
+    print("MSE:", mse)
+    print("R2 Score:", r2)
+
+# ------------------------------------------------
+# 7. Compare Models
+# ------------------------------------------------
+results_df = pd.DataFrame(results)
+
+print("\n=============================")
+print("Model Comparison (Lower MSE is better):")
+print(results_df.sort_values(by="MSE"))
+
+import pandas as pd
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.metrics import silhouette_score
+
+# ------------------------------------------------
+# 1. Load Dataset
+# ------------------------------------------------
+df = pd.read_csv("goldprice.csv")
+
+# ------------------------------------------------
+# 2. Clean Numeric Columns (IMPORTANT)
+# ------------------------------------------------
+cols = ['Price', 'Open', 'High', 'Low']
+
+for col in cols:
+    df[col] = df[col].astype(str).str.replace(',', '')
+    df[col] = pd.to_numeric(df[col])
+
+df = df.dropna()
+
+X = df[['Price', 'Open', 'High', 'Low']]
+
+results = []
+
+# ------------------------------------------------
+# 3. K-Means Clustering
+# ------------------------------------------------
+kmeans = KMeans(n_clusters=3, random_state=42)
+labels_kmeans = kmeans.fit_predict(X)
+
+inertia = kmeans.inertia_
+sil_score = silhouette_score(X, labels_kmeans)
+
+results.append({
+    "Model": "K-Means",
+    "Inertia": inertia,
+    "Silhouette": sil_score
+})
+
+# ------------------------------------------------
+# 4. Hierarchical Clustering
+# ------------------------------------------------
+hier = AgglomerativeClustering(n_clusters=3)
+labels_hier = hier.fit_predict(X)
+
+sil_score = silhouette_score(X, labels_hier)
+
+results.append({
+    "Model": "Hierarchical",
+    "Inertia": "N/A",
+    "Silhouette": sil_score
+})
+
+# ------------------------------------------------
+# 5. Results
+# ------------------------------------------------
+results_df = pd.DataFrame(results)
+
+print("\nClustering Comparison:")
+print(results_df.sort_values(by="Silhouette", ascending=False))
+
